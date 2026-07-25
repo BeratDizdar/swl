@@ -1,14 +1,17 @@
 ```c
-#include"swl.h"
+#include "swl.h"
 
-loop(float dt){
-    if (swl_IsKeyDown(27)) swl_SendQuitEvent();
-}
 int main() {
-    swl_CreateWindow("X",400,300);
-    //void* h = swl_GetWindowPtr();
-    swl_Mainloop(loop);
+    swl_CreateWindow("X", 400, 300);
+
+    for (;!swl_ShouldClose();) {
+        if (swl_IsKeyPressed(27)) swl_SendQuitEvent();
+
+        swl_PollEvents();
+    } 
+
     swl_CloseWindow();
+
     return 0;
 }
 ```

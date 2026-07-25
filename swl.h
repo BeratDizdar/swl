@@ -1,13 +1,11 @@
 #pragma once
-// ufak deneyler için ekledim
-//#define APIENTRY __cdecl
-//#define WINGDIAPI
 
-void swl_CreateWindow(const char* t, int w, int h);
+void swl_CreateWindow(const char* title, int width, int height);
 void*swl_GetWindowPtr();
 void swl_CloseWindow();
 void swl_SendQuitEvent();
-void swl_Mainloop(int(*loop)(float));
+int  swl_ShouldClose();
+void swl_PollEvents();
 int  swl_IsKeyDown(int y);
 int  swl_IsKeyPressed(int y);
 int  swl_IsKeyReleased(int y);
