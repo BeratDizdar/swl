@@ -32,8 +32,14 @@ void swl_CreateWindow(const char* title, int width, int height){
     int s = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
     
     RegisterClassA(&(WNDCLASSA){ CS_OWNDC, _c, 0, 0, i, 0, c, 0, 0, n });
-    
-    _w.handler = CreateWindowA(n, title, s, xy, xy, width, height, 0, 0, i, 0);
+
+    RECT rect = { 0, 0, width, height };
+    AdjustWindowRect(&rect, s, 0);
+    int win_w = rect.right - rect.left;
+    int win_h = rect.bottom - rect.top;
+
+    _w.handler = CreateWindowA(n, title, s, xy, xy, win_w, win_h, 0, 0, i, 0);
+
     QueryPerformanceFrequency(&_w.f);
     QueryPerformanceCounter(&_w.l);
 }
