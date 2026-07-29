@@ -13,6 +13,7 @@ typedef struct swl_Window {
     HGLRC rc;
     HDC dc;
     LARGE_INTEGER f,l,c;
+    float dt;
     HWND handler;
     BYTE k[256], pk[256];
     int should_close;
@@ -58,9 +59,11 @@ void swl_PollEvents() {
     for(int i=0;i<256;i++)_w.pk[i]=_w.k[i];
     GetKeyboardState(_w.k);
     QueryPerformanceCounter(&_w.c);
-    float dt=(float)(_w.c.QuadPart-_w.l.QuadPart)/(float)_w.f.QuadPart;
+    _w.dt=(float)(_w.c.QuadPart-_w.l.QuadPart)/(float)_w.f.QuadPart;
     _w.l=_w.c;
 }
+
+float swl_GetFrameTime() { return _w.dt; }
 
 int swl_IsKeyDown(int y){return _w.k[y]&128;}
 int swl_IsKeyPressed(int y){return (_w.k[y]&128)&&!(_w.pk[y]&128);}
@@ -71,6 +74,10 @@ void swl_GetMousePos(int* x, int* y){
     ScreenToClient(_w.handler, &p);
     *x = p.x; 
     *y = p.y;
+}
+
+void swl_PassScheduler() {
+    Sleep(1);
 }
 
 void swl_GL_CreateContext(int major, int minor) {
@@ -100,8 +107,8 @@ void swl_GL_CreateContext(int major, int minor) {
 
     HGLRC dummy_rc = wglCreateContext(_w.dc);
     wglMakeCurrent(_w.dc, dummy_rc);
-    
-    void*(*wglARBctx)(void*,...) = wglGetProcAddress("wglCreateContextAttribsARB");
+
+    void*(*wglARBctx)(HDC, HGLRC, int*) = (void*)wglGetProcAddress("wglCreateContextAttribsARB");
     if (!wglARBctx) { _w.rc = dummy_rc; return; }
     int attribs[] = {
         WGL_CONTEXT_MAJOR_VERSION_ARB, major,
@@ -136,7 +143,6 @@ void swl_GL_DestroyContext() {
 
 void swl_GL_SwapBuffers() {
     SwapBuffers(_w.dc);
-    Sleep(1);
 }
 
 void*swl_GL_GetProcAddress(const char* proc) {
