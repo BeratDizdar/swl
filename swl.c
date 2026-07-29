@@ -73,7 +73,7 @@ void swl_GetMousePos(int* x, int* y){
     *y = p.y;
 }
 
-void swl_GL_CreateContext() {
+void swl_GL_CreateContext(int major, int minor) {
     PIXELFORMATDESCRIPTOR pfd = { 
         sizeof(PIXELFORMATDESCRIPTOR),    // size of this pfd  
         1,                                // version number  
@@ -97,14 +97,15 @@ void swl_GL_CreateContext() {
     _w.dc = GetDC(_w.handler);
     int iPixelFormat = ChoosePixelFormat(_w.dc, &pfd);
     SetPixelFormat(_w.dc, iPixelFormat, &pfd);
+
     HGLRC dummy_rc = wglCreateContext(_w.dc);
     wglMakeCurrent(_w.dc, dummy_rc);
     
     void*(*wglARBctx)(void*,...) = wglGetProcAddress("wglCreateContextAttribsARB");
     if (!wglARBctx) { _w.rc = dummy_rc; return; }
     int attribs[] = {
-        WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-        WGL_CONTEXT_MINOR_VERSION_ARB, 6,
+        WGL_CONTEXT_MAJOR_VERSION_ARB, major,
+        WGL_CONTEXT_MINOR_VERSION_ARB, minor,
         WGL_CONTEXT_PROFILE_MASK_ARB,  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
         #ifdef _DEBUG
         WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
@@ -115,9 +116,14 @@ void swl_GL_CreateContext() {
     };
     
     _w.rc = wglARBctx(_w.dc, 0, attribs);
-    wglMakeCurrent(NULL, NULL);
-    wglDeleteContext(dummy_rc);
-    wglMakeCurrent(_w.dc, _w.rc);
+    if (_w.rc != NULL) {
+        wglMakeCurrent(NULL, NULL);
+        wglDeleteContext(dummy_rc);
+        wglMakeCurrent(_w.dc, _w.rc);
+    }
+    else {
+        _w.rc = dummy_rc;
+    }
 }
 
 void swl_GL_DestroyContext() {
