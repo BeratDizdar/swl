@@ -80,7 +80,7 @@ void swl_PassScheduler() {
     Sleep(1);
 }
 
-void swl_GL_CreateContext(int major, int minor) {
+void swl_GL_CreateContext(int major, int minor, int zbuf, int sbuf) {
     PIXELFORMATDESCRIPTOR pfd = { 
         sizeof(PIXELFORMATDESCRIPTOR),    // size of this pfd  
         1,                                // version number  
@@ -94,8 +94,8 @@ void swl_GL_CreateContext(int major, int minor) {
         0,                                // shift bit ignored  
         0,                                // no accumulation buffer  
         0, 0, 0, 0,                       // accum bits ignored  
-        32,                               // 32-bit z-buffer      
-        0,                                // no stencil buffer  
+        zbuf,                             // z-buffer      
+        sbuf,                             // stencil buffer  
         0,                                // no auxiliary buffer  
         PFD_MAIN_PLANE,                   // main layer  
         0,                                // reserved  
@@ -107,6 +107,12 @@ void swl_GL_CreateContext(int major, int minor) {
 
     HGLRC dummy_rc = wglCreateContext(_w.dc);
     wglMakeCurrent(_w.dc, dummy_rc);
+
+    int is_core_profile = (major > 3) || (major == 3 && minor >= 2);
+    if (!is_core_profile) {
+        _w.rc = dummy_rc;
+        return;
+    }
 
     void*(*wglARBctx)(HDC, HGLRC, int*) = (void*)wglGetProcAddress("wglCreateContextAttribsARB");
     if (!wglARBctx) { _w.rc = dummy_rc; return; }

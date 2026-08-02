@@ -12,7 +12,7 @@ int   swl_IsKeyPressed(int y);
 int   swl_IsKeyReleased(int y);
 void  swl_GetMousePos(int* x, int* y);
 void  swl_PassScheduler(); // sleep(1ms)
-void  swl_GL_CreateContext(int major, int minor);
+void  swl_GL_CreateContext(int major, int minor, int zbuf, int sbuf);
 void  swl_GL_DestroyContext();
 void  swl_GL_SwapBuffers();
 void* swl_GL_GetProcAddress(const char* proc);
