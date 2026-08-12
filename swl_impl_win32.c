@@ -120,6 +120,7 @@ void swl_GL_CreateContext(int major, int minor, int zbuf, int sbuf) {
     HGLRC dummy_rc = wglCreateContext(_w.dc);
     wglMakeCurrent(_w.dc, dummy_rc);
 
+    // driver zaten 4.6 sağlıyor ama işte dümenden lazım
     int is_core_profile = (major > 3) || (major == 3 && minor >= 2);
     if (!is_core_profile) {
         _w.rc = dummy_rc;
