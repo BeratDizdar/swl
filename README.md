@@ -8,7 +8,8 @@ int main() {
         if (swl_IsKeyPressed(27)) swl_SendQuitEvent();
 
         swl_PollEvents();
-    } 
+        swl_PassScheduler();
+    }
 
     swl_CloseWindow();
 
