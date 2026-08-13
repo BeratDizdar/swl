@@ -1,5 +1,7 @@
 #pragma once
 
+// key codeları ayırmak lazımmış platforma özel
+
 void  swl_CreateWindow(const char* title, int width, int height);
 void* swl_GetWindowPtr();
 void  swl_CloseWindow();
