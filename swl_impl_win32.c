@@ -1,6 +1,8 @@
 #include"swl.h"
 #include<Windows.h>
 
+#define GPUAPI __declspec(dllexport)
+
 #define WGL_CONTEXT_MAJOR_VERSION_ARB      0x2091
 #define WGL_CONTEXT_MINOR_VERSION_ARB      0x2092
 #define WGL_CONTEXT_PROFILE_MASK_ARB       0x9126
@@ -25,7 +27,7 @@ LRESULT CALLBACK _c(HWND h,UINT m,WPARAM w,LPARAM l){
     return DefWindowProcA(h,m,w,l);
 }
 
-void swl_CreateWindow(const char* title, int width, int height){
+GPUAPI void swl_CreateWindow(const char* title, int width, int height){
     HINSTANCE i = GetModuleHandleA(0);
     HCURSOR c = LoadCursorA(0,(LPCSTR)IDC_ARROW);
     LPCSTR n = "w";
@@ -45,13 +47,13 @@ void swl_CreateWindow(const char* title, int width, int height){
     QueryPerformanceCounter(&_w.l);
 }
 
-void*swl_GetWindowPtr(){return (void*)_w.handler;}
-void swl_CloseWindow(){DestroyWindow(_w.handler);}
-void swl_SendQuitEvent(){_w.should_close=1;}
+GPUAPI void*swl_GetWindowPtr(){return (void*)_w.handler;}
+GPUAPI void swl_CloseWindow(){DestroyWindow(_w.handler);}
+GPUAPI void swl_SendQuitEvent(){_w.should_close=1;}
 
-int swl_ShouldClose() { return _w.should_close; }
+GPUAPI int swl_ShouldClose() { return _w.should_close; }
 
-void swl_PollEvents() {
+GPUAPI void swl_PollEvents() {
     for(MSG m={0};m.message!=WM_QUIT && PeekMessageW(&m,0,0,0,1)>0;){
         TranslateMessage(&m);
         DispatchMessageW(&m);
@@ -63,12 +65,12 @@ void swl_PollEvents() {
     _w.l=_w.c;
 }
 
-float swl_GetFrameTime() { return _w.dt; }
+GPUAPI float swl_GetFrameTime() { return _w.dt; }
 
-int swl_IsKeyDown(int y){return _w.k[y]&128;}
-int swl_IsKeyPressed(int y){return (_w.k[y]&128)&&!(_w.pk[y]&128);}
-int swl_IsKeyReleased(int y){return !(_w.k[y]&128)&&(_w.pk[y]&128);}
-void swl_GetMousePos(int* x, int* y){
+GPUAPI int swl_IsKeyDown(int y){return _w.k[y]&128;}
+GPUAPI int swl_IsKeyPressed(int y){return (_w.k[y]&128)&&!(_w.pk[y]&128);}
+GPUAPI int swl_IsKeyReleased(int y){return !(_w.k[y]&128)&&(_w.pk[y]&128);}
+GPUAPI void swl_GetMousePos(int* x, int* y){
     POINT p; 
     GetCursorPos(&p); 
     ScreenToClient(_w.handler, &p);
@@ -76,23 +78,23 @@ void swl_GetMousePos(int* x, int* y){
     *y = p.y;
 }
 
-void swl_PassScheduler() {
+GPUAPI void swl_PassScheduler() {
     Sleep(1);
 }
 
-void* swl_LoadLibrary(const char* name) {
+GPUAPI void* swl_LoadLibrary(const char* name) {
     return LoadLibraryA(name);
 }
 
-void* swl_GetFunction(void* lib, const char* func) {
+GPUAPI void* swl_GetFunction(void* lib, const char* func) {
     return GetProcAddress(lib, func);
 }
 
-void swl_FreeLibrary(void* lib) {
+GPUAPI void swl_FreeLibrary(void* lib) {
     FreeLibrary(lib);
 }
 
-void swl_GL_CreateContext(int major, int minor, int zbuf, int sbuf) {
+GPUAPI void swl_GL_CreateContext(int major, int minor, int zbuf, int sbuf) {
     PIXELFORMATDESCRIPTOR pfd = { 
         sizeof(PIXELFORMATDESCRIPTOR),    // size of this pfd  
         1,                                // version number  
@@ -152,7 +154,7 @@ void swl_GL_CreateContext(int major, int minor, int zbuf, int sbuf) {
     }
 }
 
-void swl_GL_DestroyContext() {
+GPUAPI void swl_GL_DestroyContext() {
     if (_w.rc) {
         wglMakeCurrent(NULL, NULL);
         wglDeleteContext(_w.rc);
@@ -160,11 +162,11 @@ void swl_GL_DestroyContext() {
     }
 }
 
-void swl_GL_SwapBuffers() {
+GPUAPI void swl_GL_SwapBuffers() {
     SwapBuffers(_w.dc);
 }
 
-void*swl_GL_GetProcAddress(const char* proc) {
+GPUAPI void*swl_GL_GetProcAddress(const char* proc) {
     void *p = (void*)wglGetProcAddress(proc);
     if(p == 0 ||
         (p == (void*)0x1) || (p == (void*)0x2) || (p == (void*)0x3) ||
