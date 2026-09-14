@@ -14,8 +14,9 @@
 typedef struct swl_Window {
     HGLRC rc;
     HDC dc;
-    LARGE_INTEGER f,l,c;
-    float dt;
+    uint64_t freq;       // QPF frekansı (tick/sn)
+    uint64_t last_time;  // Bir önceki frame'in QPC tick değeri
+    uint64_t dt_us;      // Delta time (Mikrosaniye - µs)
     HWND handler;
     BYTE k[256], pk[256];
     int should_close;
@@ -43,8 +44,12 @@ GPUAPI void swl_CreateWindow(const char* title, int width, int height){
 
     _w.handler = CreateWindowA(n, title, s, xy, xy, win_w, win_h, 0, 0, i, 0);
 
-    QueryPerformanceFrequency(&_w.f);
-    QueryPerformanceCounter(&_w.l);
+    LARGE_INTEGER li;
+    QueryPerformanceFrequency(&li);
+    _w.freq = (uint64_t)li.QuadPart;
+
+    QueryPerformanceCounter(&li);
+    _w.last_time = (uint64_t)li.QuadPart;
 }
 
 GPUAPI void*swl_GetWindowPtr(){return (void*)_w.handler;}
@@ -54,18 +59,31 @@ GPUAPI void swl_SendQuitEvent(){_w.should_close=1;}
 GPUAPI int swl_ShouldClose() { return _w.should_close; }
 
 GPUAPI void swl_PollEvents() {
-    for(MSG m={0};m.message!=WM_QUIT && PeekMessageW(&m,0,0,0,1)>0;){
+    for (MSG m = {0}; m.message != WM_QUIT && PeekMessageW(&m, 0, 0, 0, 1) > 0;) {
         TranslateMessage(&m);
         DispatchMessageW(&m);
     }
-    for(int i=0;i<256;i++)_w.pk[i]=_w.k[i];
+    for (int i = 0; i < 256; i++) _w.pk[i] = _w.k[i];
     GetKeyboardState(_w.k);
-    QueryPerformanceCounter(&_w.c);
-    _w.dt=(float)(_w.c.QuadPart-_w.l.QuadPart)/(float)_w.f.QuadPart;
-    _w.l=_w.c;
+
+    LARGE_INTEGER li;
+    QueryPerformanceCounter(&li);
+    uint64_t current_time = (uint64_t)li.QuadPart;
+
+    uint64_t elapsed_ticks = current_time - _w.last_time;
+    _w.last_time = current_time;
+    _w.dt_us = (elapsed_ticks * 1000000ULL) / _w.freq;
 }
 
-GPUAPI float swl_GetFrameTime() { return _w.dt; }
+// Ham mikrosaniye (Örn: 16666)
+GPUAPI uint64_t swl_GetFrameTimeUs() { 
+    return _w.dt_us; 
+}
+
+// Fizik formülleri için saniye cinsinden (dt * hız)
+GPUAPI double swl_GetFrameTimeSeconds() { 
+    return (double)_w.dt_us / 1000000.0; 
+}
 
 GPUAPI int swl_IsKeyDown(int y){return _w.k[y]&128;}
 GPUAPI int swl_IsKeyPressed(int y){return (_w.k[y]&128)&&!(_w.pk[y]&128);}
@@ -82,76 +100,33 @@ GPUAPI void swl_PassScheduler() {
     Sleep(1);
 }
 
-GPUAPI void* swl_LoadLibrary(const char* name) {
-    return LoadLibraryA(name);
-}
+static void _swl_GL_CreateLegacyContext(int doublebuffer) {
+    // 32 color, 8 alpha, 24 depth, 8 stencil yaptın unutma
 
-GPUAPI void* swl_GetFunction(void* lib, const char* func) {
-    return GetProcAddress(lib, func);
-}
-
-GPUAPI void swl_FreeLibrary(void* lib) {
-    FreeLibrary(lib);
-}
-
-GPUAPI void swl_GL_CreateContext(int major, int minor, int zbuf, int sbuf) {
     PIXELFORMATDESCRIPTOR pfd = { 
         sizeof(PIXELFORMATDESCRIPTOR),    // size of this pfd  
         1,                                // version number  
         PFD_DRAW_TO_WINDOW |              // support window  
         PFD_SUPPORT_OPENGL |              // support OpenGL  
-        PFD_DOUBLEBUFFER,                 // double buffered  
-        PFD_TYPE_RGBA,                    // RGBA type  
-        24,                               // 24-bit color depth  
-        0, 0, 0, 0, 0, 0,                 // color bits ignored  
-        0,                                // no alpha buffer  
-        0,                                // shift bit ignored  
-        0,                                // no accumulation buffer  
-        0, 0, 0, 0,                       // accum bits ignored  
-        zbuf,                             // z-buffer      
-        sbuf,                             // stencil buffer  
-        0,                                // no auxiliary buffer  
-        PFD_MAIN_PLANE,                   // main layer  
-        0,                                // reserved  
-        0, 0, 0                           // layer masks ignored  
+        (doublebuffer)?PFD_DOUBLEBUFFER:0,                 // double buffered  
+        PFD_TYPE_RGBA,
+        32, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 24, 8, 0,
+        PFD_MAIN_PLANE, 0, 0, 0, 0
     };
     _w.dc = GetDC(_w.handler);
     int iPixelFormat = ChoosePixelFormat(_w.dc, &pfd);
     SetPixelFormat(_w.dc, iPixelFormat, &pfd);
 
-    HGLRC dummy_rc = wglCreateContext(_w.dc);
-    wglMakeCurrent(_w.dc, dummy_rc);
+    _w.rc = wglCreateContext(_w.dc);
+    wglMakeCurrent(_w.dc, _w.rc);
+}
 
-    // driver zaten 4.6 sağlıyor ama işte dümenden lazım
-    int is_core_profile = (major > 3) || (major == 3 && minor >= 2);
-    if (!is_core_profile) {
-        _w.rc = dummy_rc;
-        return;
-    }
+GPUAPI void swl_GL_CreateLegacyContext() {
+    _swl_GL_CreateLegacyContext(1);
+}
 
-    void*(*wglARBctx)(HDC, HGLRC, int*) = (void*)wglGetProcAddress("wglCreateContextAttribsARB");
-    if (!wglARBctx) { _w.rc = dummy_rc; return; }
-    int attribs[] = {
-        WGL_CONTEXT_MAJOR_VERSION_ARB, major,
-        WGL_CONTEXT_MINOR_VERSION_ARB, minor,
-        WGL_CONTEXT_PROFILE_MASK_ARB,  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-        #ifdef _DEBUG
-        WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
-        #else
-        WGL_CONTEXT_OPENGL_NO_ERROR_ARB, 1,   // sadece release build'de
-        #endif
-        0 // liste sonu
-    };
-    
-    _w.rc = wglARBctx(_w.dc, 0, attribs);
-    if (_w.rc != NULL) {
-        wglMakeCurrent(NULL, NULL);
-        wglDeleteContext(dummy_rc);
-        wglMakeCurrent(_w.dc, _w.rc);
-    }
-    else {
-        _w.rc = dummy_rc;
-    }
+GPUAPI void swl_GL_CreateLegacyContextSingleBuffer() {
+    _swl_GL_CreateLegacyContext(0);
 }
 
 GPUAPI void swl_GL_DestroyContext() {
