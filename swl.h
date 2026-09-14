@@ -3,7 +3,7 @@
 // key codeları ayırmak lazımmış platforma özel
 
 void     swl_CreateWindow(const char* title, int width, int height);
-void*    swl_GetWindowPtr();
+void     *swl_GetWindowPtr();
 void     swl_CloseWindow();
 void     swl_SendQuitEvent();
 int      swl_ShouldClose();
@@ -19,4 +19,5 @@ void     swl_GL_CreateLegacyContext();
 void     swl_GL_CreateLegacyContextSingleBuffer();
 void     swl_GL_DestroyContext();
 void     swl_GL_SwapBuffers();
-void*    swl_GL_GetProcAddress(const char* proc);
+void     *swl_GL_GetProcAddress(const char *proc);
+uint8_t  *swl_LoadImage(const char *path);

@@ -1,5 +1,8 @@
 #include"swl.h"
 #include<Windows.h>
+#define STBI_NO_SIMD
+#define STB_IMAGE_IMPLEMENTATION
+#include "depen/stb_image.h"
 
 #define GPUAPI __declspec(dllexport)
 
@@ -141,7 +144,7 @@ GPUAPI void swl_GL_SwapBuffers() {
     SwapBuffers(_w.dc);
 }
 
-GPUAPI void*swl_GL_GetProcAddress(const char* proc) {
+GPUAPI void *swl_GL_GetProcAddress(const char* proc) {
     void *p = (void*)wglGetProcAddress(proc);
     if(p == 0 ||
         (p == (void*)0x1) || (p == (void*)0x2) || (p == (void*)0x3) ||
@@ -152,4 +155,14 @@ GPUAPI void*swl_GL_GetProcAddress(const char* proc) {
     }
         
     return p;
+}
+
+GPUAPI uint8_t *swl_LoadImage(const char *path) {
+    int width, height, channels;
+    uint8_t *data = stbi_load(path, &width, &height, &channels, 4);
+    if (!data) {
+        fprintf(stderr, "swl_LoadImage(stbi_load): %s???", path);
+        return NULL;
+    }
+    return data;
 }
